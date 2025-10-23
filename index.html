@@ -1,0 +1,299 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Reveal Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        #game-container {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 1200px;
+        }
+        #image-section {
+            position: relative;
+        }
+        #image-container {
+            width: 800px;
+            height: 800px;
+            position: relative;
+            border: 1px solid black;
+        }
+        #image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+        }
+        .tile {
+            background-image: url('tile.png'); /* Replace with your image path */
+            background-size: cover;
+            background-position: center;
+            transition: opacity 0.5s ease;
+        }
+        .revealed {
+            opacity: 0;
+        }
+        #clue {
+            margin-bottom: 20px;
+            font-size: 18px;
+            text-align: left;
+            margin-left: 20px;
+        }
+        #right-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #current-score {
+            margin: 10px 0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        #group-scores {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .group {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        .group span {
+            font-size: 18px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Reveal Game</h1>
+    <div id="game-container">
+        <div id="image-section">
+            <div id="clue"></div>
+            <div id="image-container">
+                <img id="image" src="" alt="Hidden Image">
+                <div id="grid"></div>
+            </div>
+        </div>
+        <div id="right-column">
+            <div id="current-score">Current Score: 160</div>
+            <div id="controls">
+                <button id="reveal-btn">Reveal One Tile</button>
+                <button id="toggle-answer">Toggle Full Reveal</button>
+            </div>
+            <div id="group-scores">
+                <h2>Group Scores</h2>
+                <div class="group">
+                    <span>Group 1: <span id="group1-score">0</span></span>
+                    <button id="grant-btn-0" onclick="grantScore(0)">Grant to Group 1</button>
+                </div>
+                <div class="group">
+                    <span>Group 2: <span id="group2-score">0</span></span>
+                    <button id="grant-btn-1" onclick="grantScore(1)">Grant to Group 2</button>
+                </div>
+                <div class="group">
+                    <span>Group 3: <span id="group3-score">0</span></span>
+                    <button id="grant-btn-2" onclick="grantScore(2)">Grant to Group 3</button>
+                </div>
+                <div class="group">
+                    <span>Group 4: <span id="group4-score">0</span></span>
+                    <button id="grant-btn-3" onclick="grantScore(3)">Grant to Group 4</button>
+                </div>
+                <button id="wrong-answer-btn">Wrong Answer, Next Question</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Define the questions (10 rounds). Replace with your actual image URLs, clues, and answers.
+        const questions = [
+            { image: 'pic1.jpg', clue: 'QUESTION 1: I have hands but cannot clap. What am I?', answer: 'THE ANSWER: A clock.' },
+            { image: 'pic2.jpg', clue: "QUESTION 2: I’m tall when I’m young and short when I’m old.", answer: 'THE ANSWER: A candle' },
+            { image: 'pic3.jpg', clue: 'QUESTION 3: In Avengers: Endgame (2019), aside from Thor, which character is able to lift Mjolnir?', answer: 'THE ANSWER: Captain America' },
+            { image: 'pic4.jpg', clue: 'QUESTION 4: In which Marvel film does Black Panther make his first appearance', answer: 'THE ANSWER: Captain America: Civil War' },
+            { image: 'pic5.jpg', clue: 'QUESTION 5: Which NBA team has made the most appearances in the finals?', answer: 'THE ANSWER: Los Angeles Lakers' },
+            { image: 'pic6.jpg', clue: 'QUESTION 6: The only country with non rectangular national flag shape.', answer: 'THE ANSWER: Nepal' },
+            { image: 'pic7.jpg', clue: 'QUESTION 7: The largest muscle in human body.', answer: 'THE ANSWER: Gluteus maximus (butt muscle)' },
+            { image: 'pic8.jpg', clue: 'QUESTION 8: The most valuable company in indonesia by market capitalization.', answer: 'THE ANSWER: THE ANSWER: Bank Central Asia (BCA)' },
+            { image: 'pic9.jpg', clue: 'QUESTION 9: Fastest aquatic animal', answer: 'THE ANSWER: A sailfish' },
+            { image: 'pic10.jpg', clue: 'QUESTION 10:abola-bale is an expression that convey the feeling of uncertainty, commonly used in which part of Indonesia?', answer: 'THE ANSWER: East Nusa Tenggara' }
+        ];
+
+        let currentQuestion = 0;
+        let currentScore = 160;
+        let groupScores = [0, 0, 0, 0];
+        let tiles = [];
+        let revealedTiles = new Set();
+        let isFullyRevealed = false;
+
+        function initGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            tiles = [];
+            revealedTiles.clear();
+            for (let i = 0; i < 16; i++) {
+                const tile = document.createElement('div');
+                tile.classList.add('tile');
+                tile.dataset.index = i;
+                grid.appendChild(tile);
+                tiles.push(tile);
+            }
+        }
+
+        function loadQuestion() {
+            if (currentQuestion >= questions.length) {
+                const maxScore = Math.max(...groupScores);
+                const winningGroups = groupScores
+                    .map((score, index) => ({ group: index + 1, score }))
+                    .filter(item => item.score === maxScore);
+                const winnerText = winningGroups.length > 1
+                    ? `This is the final question. Congratulations to Groups ${winningGroups.map(w => w.group).join(' and ')} with the winning score of ${maxScore}`
+                    : `This is the final question. Congratulations to Group ${winningGroups[0].group} with the winning score of ${maxScore}`;
+                document.getElementById('clue').textContent = winnerText;
+                document.getElementById('reveal-btn').disabled = true;
+                document.getElementById('toggle-answer').disabled = true;
+                for (let i = 0; i < 4; i++) {
+                    document.getElementById(`grant-btn-${i}`).disabled = true;
+                }
+                document.getElementById('wrong-answer-btn').disabled = true;
+                return;
+            }
+            const q = questions[currentQuestion];
+            document.getElementById('image').src = q.image;
+            document.getElementById('clue').textContent = q.clue;
+            currentScore = 160;
+            updateCurrentScore();
+            initGrid();
+            isFullyRevealed = false;
+            document.getElementById('reveal-btn').disabled = false;
+            document.getElementById('toggle-answer').disabled = false;
+            for (let i = 0; i < 4; i++) {
+                document.getElementById(`grant-btn-${i}`).disabled = false;
+            }
+            document.getElementById('wrong-answer-btn').disabled = false;
+        }
+
+        function updateCurrentScore() {
+            document.getElementById('current-score').textContent = `Current Score: ${currentScore}`;
+        }
+
+        function updateGroupScores() {
+            for (let i = 0; i < 4; i++) {
+                document.getElementById(`group${i+1}-score`).textContent = groupScores[i];
+            }
+        }
+
+        function revealRandomTile() {
+            if (revealedTiles.size >= 16 || currentScore <= 0) return;
+            let randomIndex;
+            do {
+                randomIndex = Math.floor(Math.random() * 16);
+            } while (revealedTiles.has(randomIndex));
+            revealedTiles.add(randomIndex);
+            tiles[randomIndex].classList.add('revealed');
+            currentScore -= 10;
+            updateCurrentScore();
+        }
+
+        function toggleFullReveal() {
+            isFullyRevealed = !isFullyRevealed;
+            tiles.forEach(tile => {
+                if (isFullyRevealed) {
+                    tile.classList.add('revealed');
+                } else {
+                    if (!revealedTiles.has(parseInt(tile.dataset.index))) {
+                        tile.classList.remove('revealed');
+                    }
+                }
+            });
+            // Update clue text based on reveal state
+            if (isFullyRevealed && currentQuestion < questions.length) {
+                document.getElementById('clue').textContent = questions[currentQuestion].answer;
+            } else if (currentQuestion < questions.length) {
+                document.getElementById('clue').textContent = questions[currentQuestion].clue;
+            }
+        }
+
+        window.grantScore = function(groupIndex) {
+            groupScores[groupIndex] += currentScore;
+            updateGroupScores();
+            currentQuestion++;
+            loadQuestion();
+        }
+
+        function wrongAnswer() {
+            currentQuestion++;
+            loadQuestion();
+        }
+
+        document.getElementById('reveal-btn').addEventListener('click', revealRandomTile);
+        document.getElementById('toggle-answer').addEventListener('click', toggleFullReveal);
+        document.getElementById('wrong-answer-btn').addEventListener('click', wrongAnswer);
+
+        // Start the game
+        loadQuestion();
+    </script>
+</body>
+</html>
