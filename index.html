@@ -44,86 +44,188 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Reveal Game</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px;
+            padding: clamp(10px, 2vw, 20px);
+            min-height: 100vh;
+            overflow-x: hidden;
         }
+
+        h1 {
+            margin: 0 0 20px;
+            text-align: center;
+            font-size: clamp(24px, 4vw, 36px);
+        }
+
         #game-container {
-            display: flex;
-            justify-content: space-around;
-            width: 100%;
-            max-width: 1200px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+            gap: clamp(20px, 4vw, 50px);
+            align-items: start;
+            width: min(100%, 1200px);
         }
+
         #image-section {
             position: relative;
+            min-width: 0;
+            width: 100%;
         }
+
         #image-container {
-            width: 800px;
-            height: 800px;
             position: relative;
+            width: min(100%, 800px);
+            aspect-ratio: 1 / 1;
+            margin: 0 auto;
             border: 1px solid black;
+            overflow: hidden;
         }
+
         #image {
+            display: block;
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
+
         #grid {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            inset: 0;
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(4, 1fr);
         }
+
         .tile {
-            background-image: url('tile.png'); /* Replace with your image path */
+            background-image: url('tile.png');
             background-size: cover;
             background-position: center;
             transition: opacity 0.5s ease;
         }
+
         .revealed {
             opacity: 0;
+            pointer-events: none;
         }
+
         #clue {
-            margin-bottom: 20px;
-            font-size: 18px;
+            margin: 0 0 20px;
+            font-size: clamp(16px, 2vw, 18px);
+            line-height: 1.4;
             text-align: left;
-            margin-left: 20px;
         }
+
         #right-column {
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: stretch;
+            min-width: 0;
         }
+
         #current-score {
-            margin: 10px 0;
-            font-size: 24px;
+            margin: 0 0 10px;
+            font-size: clamp(20px, 3vw, 24px);
             font-weight: bold;
+            text-align: center;
         }
+
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
         button {
-            margin: 10px;
-            padding: 10px 20px;
-            font-size: 16px;
+            margin: 6px;
+            padding: 10px 16px;
+            font-size: clamp(14px, 1.8vw, 16px);
+            cursor: pointer;
         }
+
         #group-scores {
             margin-top: 20px;
             display: flex;
             flex-direction: column;
         }
+
         .group {
-            margin: 10px 0;
+            margin: 8px 0;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            gap: 8px;
         }
+
         .group span {
-            font-size: 18px;
-            margin-right: 10px;
+            font-size: clamp(16px, 2vw, 18px);
+            margin-right: 5px;
+        }
+
+        .group button {
+            flex-shrink: 0;
+        }
+
+        #wrong-answer-btn {
+            align-self: center;
+        }
+
+        /* Tablet and phone layout */
+        @media (max-width: 800px) {
+            #game-container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            #image-container {
+                width: min(100%, 800px);
+            }
+
+            #right-column {
+                width: min(100%, 800px);
+                margin: 0 auto;
+            }
+
+            #clue {
+                margin-bottom: 12px;
+            }
+
+            #group-scores {
+                margin-top: 10px;
+            }
+        }
+
+        /* Small phones */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            h1 {
+                margin-bottom: 12px;
+            }
+
+            .group {
+                flex-wrap: wrap;
+            }
+
+            .group button {
+                margin-left: auto;
+            }
+
+            button {
+                padding: 9px 12px;
+            }
         }
     </style>
 </head>
@@ -178,7 +280,7 @@
             { image: 'pic7.jpg', clue: 'QUESTION 7: The largest muscle in human body.', answer: 'THE ANSWER: Gluteus maximus (butt muscle)' },
             { image: 'pic8.jpg', clue: 'QUESTION 8: The most valuable company in indonesia by market capitalization.', answer: 'THE ANSWER: THE ANSWER: Bank Central Asia (BCA)' },
             { image: 'pic9.jpg', clue: 'QUESTION 9: Fastest aquatic animal', answer: 'THE ANSWER: A sailfish' },
-            { image: 'pic10.jpg', clue: 'QUESTION 10:abola-bale is an expression that convey the feeling of uncertainty, commonly used in which part of Indonesia?', answer: 'THE ANSWER: East Nusa Tenggara' }
+            { image: 'pic10.jpg', clue: 'QUESTION 10: Indonesia Province famous for its Komodo Dragon', answer: 'THE ANSWER: East Nusa Tenggara' }
         ];
 
         let currentQuestion = 0;
